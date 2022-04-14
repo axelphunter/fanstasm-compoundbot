@@ -1,7 +1,8 @@
 require('dotenv').config()
 const ethers = require('ethers');
-var cron = require('node-cron');
-
+const cron = require('node-cron');
+const express = require('express');
+const app = express();
 
 const genericErc20Abi = [
   {
@@ -49,7 +50,7 @@ const fxm = new ethers.Contract(
 )
 
 app.listen(process.env.PORT || 4000, function () {
-  console.log('Server starting');
+  console.log('Server started');
   cron.schedule('0 0 */2 * * *', async () => {
     try {
       const balance = await fxm.balanceOf(addresses.recipient);
