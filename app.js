@@ -2,6 +2,7 @@ require('dotenv').config()
 const ethers = require('ethers');
 var cron = require('node-cron');
 
+
 const genericErc20Abi = [
   {
     "constant": true,
@@ -47,13 +48,17 @@ const fxm = new ethers.Contract(
   account
 )
 
-cron.schedule('0 0 */2 * * *', async () => {
-  try {
-    const balance = await fxm.balanceOf(addresses.recipient);
-    await contract.getReward()
-    await contract.stake(balance, true);
-    console.log(`Staked ${balance.toString()}`)
-  } catch (e) {
-    console.log(e)
-  }
+app.listen(process.env.PORT || 4000, function () {
+  console.log('Server starting');
+  cron.schedule('0 0 */2 * * *', async () => {
+    try {
+      const balance = await fxm.balanceOf(addresses.recipient);
+      await contract.getReward()
+      await contract.stake(balance, true);
+      console.log(`Staked ${balance.toString()}`)
+    } catch (e) {
+      console.log(e)
+    }
+  });
 });
+

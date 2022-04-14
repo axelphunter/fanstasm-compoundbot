@@ -1,1 +1,1 @@
-clock:  node schedule.js
+web: node app.js
