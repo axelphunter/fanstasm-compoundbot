@@ -12,3 +12,8 @@ NETWORK_WEBSOCKET_URL - The websocket url of the Fantom network. (Chainlink and 
 RECIPIENT - The public address of your wallet.   
 
 Run the server and profit! 💸
+
+[🐦 Twitter](https://twitter.com/axelphunter)
+
+Donations welcome:
+0x3Bf41F77B7781C300dE956c99B552F3569664Acd
