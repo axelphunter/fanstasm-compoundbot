@@ -53,8 +53,8 @@ app.listen(process.env.PORT || 4000, function () {
   console.log('Server started');
   cron.schedule('0 0 */1 * * *', async () => {
     try {
-      const balance = await fxm.balanceOf(addresses.recipient);
       await contract.getReward()
+      const balance = await fxm.balanceOf(addresses.recipient);
       await contract.stake(balance, true);
       console.log(`Staked ${balance.toString()}`)
     } catch (e) {
