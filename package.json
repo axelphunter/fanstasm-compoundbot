@@ -1,0 +1,23 @@
+{
+  "name": "322-uniswap-trading-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "ethers": "^5.6.3",
+    "functions": "^1.0.9",
+    "node-cron": "^3.0.0",
+    "web3": "^1.7.3",
+    "web3-functions": "^1.1.10"
+  }
+}
