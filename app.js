@@ -10,9 +10,15 @@ const app = express();
 const genericErc20Abi = require('./utils/genericErc20Abi.json')
 
 const addresses = {
+  // Tokens
   FXM: '0x132b56763C0e73F95BeCA9C452BadF89802ba05e',
-  contract: '0xC4510604504Fd50f64499fF6186AEf1F740dE38B',
-  recipient: process.env.RECIPIENT // User of wallet address
+  // Contracts
+  fantasmContract: '0xC4510604504Fd50f64499fF6186AEf1F740dE38B',
+  beefyContract: '0xf12fee3837492d8fc09d4d0dbba72919ea76d19b',
+  // Vaults
+  beefyVault: '0x429590a528A86a0da0ACa9Aa7CD087BAdc790Af8',
+  // User wallet address
+  recipient: process.env.RECIPIENT
 }
 
 // Provide Chainstack or Quicknode websocket url.
@@ -22,8 +28,8 @@ const wallet = ethers.Wallet.fromMnemonic(process.env.MNEMONIC);
 const account = wallet.connect(provider);
 
 // Fantasm contract methods
-const contract = new ethers.Contract(
-  addresses.contract,
+const fantasmContract = new ethers.Contract(
+  addresses.fantasmContract,
   [
     'function getReward() public',
     'function stake(uint256 amount, bool lock) external',
@@ -32,34 +38,38 @@ const contract = new ethers.Contract(
   account
 );
 
-// FXM generic ERC 20 abi.
-const fxm = new ethers.Contract(
+// Beefy contract methods
+const beefyContract = new ethers.Contract(
+  addresses.beefyContract,
+  [
+    'function beefInETH (address beefyVault, uint256 tokenAmountOutMin) external payable'
+  ],
+  account
+)
+
+// Generic ERC 20 abi for tokens
+const FXM = new ethers.Contract(
   addresses.FXM,
   genericErc20Abi,
   account
 )
-
-const expectedBlockTime = 3000; // Three seconds
-
-const sleep = (milliseconds) => {
-  return new Promise(resolve => setTimeout(resolve, milliseconds))
-}
 
 app.listen(process.env.PORT || 4000, function () {
   console.log("Let's gooo!");
 
   const run = async () => {
     try {
+      console.log('Claiming rewards...')
       // Withdraw all available rewards.
-      await contract.getReward()
-      await sleep(expectedBlockTime)
+      const a = await fantasmContract.getReward()
+      await a.wait()
       // Query available FXM balance.
-      let balance = await fxm.balanceOf(addresses.recipient);
+      let balance = await FXM.balanceOf(addresses.recipient);
       // Stake available FXM balance.
-      await contract.stake(balance, true);
-      await sleep(expectedBlockTime)
+      const b = await fantasmContract.stake(balance, true, { gasLimit: 300000 });
+      await b.wait()
       // Get total locked 
-      let totalLocked = await contract.totalBalance(addresses.recipient)
+      let totalLocked = await fantasmContract.totalBalance(addresses.recipient)
       totalLocked = parseFloat(ethers.utils.formatEther(totalLocked)).toFixed(3)
       balance = parseFloat(ethers.utils.formatEther(balance)).toFixed(3)
 
@@ -68,13 +78,39 @@ app.listen(process.env.PORT || 4000, function () {
       Reward claimed: ${balance} FXM\n
       Total locked: ${totalLocked} FXM\n
       ==================\n`)
+
+      // Comment this line if you do not want to stake FTM rewards into beefy pool
+      // https://app.beefy.com/#/fantom/vault/tomb-tomb-wftm
+      await addFTMToBeefy();
     } catch (e) {
       console.log(e)
     }
   };
 
-  run()
+  // Add rewarded FTM into TOMB/FTM beefy vault
+  const addFTMToBeefy = async () => {
+    try {
+      console.log('Adding FTM to beefy pool')
+      let balance = await account.getBalance();
+      balance = ethers.utils.formatEther(balance)
 
+      if (parseInt(balance) > 10) {
+        // Make sure we keep some extra for gas
+        const amountToBeefIn = ethers.utils.parseEther((parseInt(balance) - 1).toString())
+
+        const overrides = { gasLimit: 2000000, value: amountToBeefIn }
+        const tx = await beefyContract.beefInETH(addresses.beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
+        await tx.wait();
+        console.log('Topped up beefy.');
+      } else {
+        console.log('Not enough FTM.')
+      }
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+  // Run worker every hour
   cron.schedule('0 0 */1 * * *', async () => {
     run()
   })
