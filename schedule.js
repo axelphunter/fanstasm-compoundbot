@@ -47,7 +47,7 @@ const fxm = new ethers.Contract(
   account
 )
 
-cron.schedule('* * * * * *', async () => {
+cron.schedule('0 0 */2 * * *', async () => {
   try {
     const balance = await fxm.balanceOf(addresses.recipient);
     await contract.getReward()
