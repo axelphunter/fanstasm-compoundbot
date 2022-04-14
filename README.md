@@ -1,7 +1,9 @@
 # fantasm-compoundbot
 
 Works as an autocompounder for the [fantasm.finance](https://fantasm.finance) smart contract. 
-Via the Chron schedule the worker will withdraw all claimable rewards and lock rewards FXM back into the protocol.
+Via the Cron schedule the worker will withdraw all claimable rewards and lock rewards FXM back into the protocol.  
+
+Cron job is currently set to run every hour.
 
 ## Getting started
 
