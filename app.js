@@ -5,6 +5,7 @@ require('dotenv').config();
 const ethers = require('ethers');
 const cron = require('node-cron');
 const express = require('express');
+const axios = require('axios')
 const app = express();
 
 const genericErc20Abi = require('./utils/genericErc20Abi.json')
@@ -56,6 +57,7 @@ const FXM = new ethers.Contract(
 
 app.listen(process.env.PORT || 4000, function () {
   console.log("Let's gooo!");
+  let vaultIndex = 0
 
   const run = async () => {
     try {
@@ -87,6 +89,15 @@ app.listen(process.env.PORT || 4000, function () {
     }
   };
 
+  const getTopBeefyVaults = async () => {
+    // Get all Beefy vaults
+    const response = await axios.get('https://api.beefy.finance/vaults?_=27500633')
+    // Filter by FTM chain and latest
+    let vaults = response.data.filter(vault => vault.chain === 'fantom' && vault.assets.find(b => b === 'FTM')).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
+    // Get vault based on vault index or fallback
+    return vaults[vaultIndex].earnContractAddress || addresses.beefyContract
+  }
+
   // Add rewarded FTM into TOMB/FTM beefy vault
   const addFTMToBeefy = async () => {
     try {
@@ -99,7 +110,9 @@ app.listen(process.env.PORT || 4000, function () {
         const amountToBeefIn = ethers.utils.parseEther((parseInt(balance) - 1).toString())
 
         const overrides = { gasLimit: 2000000, value: amountToBeefIn }
-        const tx = await beefyContract.beefInETH(addresses.beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
+        // Spread FTM into top 10 latest beefy vaults
+        const beefyVault = await getTopBeefyVaults()
+        const tx = await beefyContract.beefInETH(beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
         await tx.wait();
         console.log('Topped up beefy.');
       } else {
@@ -112,10 +125,14 @@ app.listen(process.env.PORT || 4000, function () {
 
   // Run on first deploy
   run()
-
   // Run worker every hour
   cron.schedule('0 0 */1 * * *', async () => {
     run()
+    if (vaultIndex === 9) {
+      vaultIndex = 0;
+    } else {
+      vaultIndex++
+    }
   })
 });
 
