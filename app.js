@@ -17,7 +17,13 @@ const addresses = {
   fantasmContract: '0xC4510604504Fd50f64499fF6186AEf1F740dE38B',
   beefyContract: '0xf12fee3837492d8fc09d4d0dbba72919ea76d19b',
   // Vaults
-  beefyVault: '0x429590a528A86a0da0ACa9Aa7CD087BAdc790Af8',
+  beefyVaults: [
+    '0x6FC7AF3d1dF970Cd699E82941a71BC3Df03Ee986', // DEUS-FTM LP vault
+    '0x429590a528A86a0da0ACa9Aa7CD087BAdc790Af8', // TOMB-FTM LP vault
+    '0x44B35db29db8c5277bF842c67b4d36D42323514C', // BSHARE-FTM LP vault
+    '0x503FF2102D51ec816C693017d26E31df666Cadf0' // CRE8R-FTM LP vault
+  ],
+
   // User wallet address
   recipient: process.env.RECIPIENT
 }
@@ -111,7 +117,11 @@ app.listen(process.env.PORT || 4000, function () {
 
         const overrides = { gasLimit: 2000000, value: amountToBeefIn }
         // Spread FTM into top 10 latest beefy vaults
-        const beefyVault = await getTopBeefyVaults()
+
+        // TODO
+        // This doesn't work with "BeefIn" always.
+        // const beefyVault = await getTopBeefyVaults()
+        const beefyVault = addresses.beefyVaults[Math.floor(Math.random() * addresses.beefyVaults.length)]
         const tx = await beefyContract.beefInETH(beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
         await tx.wait();
         console.log('Topped up beefy.');
@@ -128,11 +138,11 @@ app.listen(process.env.PORT || 4000, function () {
   // Run worker every hour
   cron.schedule('0 0 */1 * * *', async () => {
     run()
-    if (vaultIndex === 9) {
-      vaultIndex = 0;
-    } else {
-      vaultIndex++
-    }
+    // if (vaultIndex === 9) {
+    //   vaultIndex = 0;
+    // } else {
+    //   vaultIndex++
+    // }
   })
 });
 
