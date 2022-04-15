@@ -94,7 +94,7 @@ app.listen(process.env.PORT || 4000, function () {
       let balance = await account.getBalance();
       balance = ethers.utils.formatEther(balance)
 
-      if (parseInt(balance) > 10) {
+      if (parseInt(balance) > 5) {
         // Make sure we keep some extra for gas
         const amountToBeefIn = ethers.utils.parseEther((parseInt(balance) - 1).toString())
 
@@ -109,6 +109,9 @@ app.listen(process.env.PORT || 4000, function () {
       console.log(e)
     }
   }
+
+  // Run on first deploy
+  run()
 
   // Run worker every hour
   cron.schedule('0 0 */1 * * *', async () => {
