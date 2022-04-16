@@ -131,7 +131,7 @@ app.listen(process.env.PORT || 4000, function () {
           tx = await vaultContractB.beefInETH(beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
         }
         await tx.wait();
-        console.log('Topped up beefy.');
+        console.log(`Topped up beefy vault: ${addresses.beefyVaults[vaultIndex]}`);
       } else {
         console.log('Not enough FTM.')
       }
