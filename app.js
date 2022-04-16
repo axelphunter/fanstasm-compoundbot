@@ -5,7 +5,6 @@ require('dotenv').config();
 const ethers = require('ethers');
 const cron = require('node-cron');
 const express = require('express');
-const axios = require('axios')
 const app = express();
 
 const genericErc20Abi = require('./utils/genericErc20Abi.json')
@@ -15,13 +14,17 @@ const addresses = {
   FXM: '0x132b56763C0e73F95BeCA9C452BadF89802ba05e',
   // Contracts
   fantasmContract: '0xC4510604504Fd50f64499fF6186AEf1F740dE38B',
-  beefyContract: '0xf12fee3837492d8fc09d4d0dbba72919ea76d19b',
+  // Beefy contracts
+  // tomb-tomb-wftm
+  vaultContactA: '0xf12fee3837492d8fc09d4d0dbba72919ea76d19b',
+  // boo-wftm-deus | based-bshare-ftm | tomb-tshare-ftm
+  vaultContractB: '0x8afc0f9bdc5dca9f0408df03a03520bfa98a15af',
   // Vaults
   beefyVaults: [
-    '0x6FC7AF3d1dF970Cd699E82941a71BC3Df03Ee986', // DEUS-FTM LP vault
     '0x429590a528A86a0da0ACa9Aa7CD087BAdc790Af8', // TOMB-FTM LP vault
+    '0x6FC7AF3d1dF970Cd699E82941a71BC3Df03Ee986', // DEUS-FTM LP vault
     '0x44B35db29db8c5277bF842c67b4d36D42323514C', // BSHARE-FTM LP vault
-    '0x503FF2102D51ec816C693017d26E31df666Cadf0' // CRE8R-FTM LP vault
+    '0xae94e96bF81b3a43027918b138B71a771D381150' // TSHARE-FTM LP vault
   ],
 
   // User wallet address
@@ -46,8 +49,15 @@ const fantasmContract = new ethers.Contract(
 );
 
 // Beefy contract methods
-const beefyContract = new ethers.Contract(
-  addresses.beefyContract,
+const vaultContactA = new ethers.Contract(
+  addresses.vaultContactA,
+  [
+    'function beefInETH (address beefyVault, uint256 tokenAmountOutMin) external payable'
+  ],
+  account
+)
+const vaultContractB = new ethers.Contract(
+  addresses.vaultContractB,
   [
     'function beefInETH (address beefyVault, uint256 tokenAmountOutMin) external payable'
   ],
@@ -95,15 +105,6 @@ app.listen(process.env.PORT || 4000, function () {
     }
   };
 
-  const getTopBeefyVaults = async () => {
-    // Get all Beefy vaults
-    const response = await axios.get('https://api.beefy.finance/vaults?_=27500633')
-    // Filter by FTM chain and latest
-    let vaults = response.data.filter(vault => vault.chain === 'fantom' && vault.assets.find(b => b === 'FTM')).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
-    // Get vault based on vault index or fallback
-    return vaults[vaultIndex].earnContractAddress || addresses.beefyContract
-  }
-
   // Add rewarded FTM into TOMB/FTM beefy vault
   const addFTMToBeefy = async () => {
     try {
@@ -121,8 +122,14 @@ app.listen(process.env.PORT || 4000, function () {
         // TODO
         // This doesn't work with "BeefIn" always.
         // const beefyVault = await getTopBeefyVaults()
-        const beefyVault = addresses.beefyVaults[Math.floor(Math.random() * addresses.beefyVaults.length)]
-        const tx = await beefyContract.beefInETH(beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
+        const vaultIndex = Math.floor(Math.random() * addresses.beefyVaults.length)
+        const beefyVault = addresses.beefyVaults[vaultIndex]
+        let tx;
+        if (vaultIndex === 0) {
+          tx = await vaultContactA.beefInETH(beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
+        } else {
+          tx = await vaultContractB.beefInETH(beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
+        }
         await tx.wait();
         console.log('Topped up beefy.');
       } else {
