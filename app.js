@@ -58,7 +58,6 @@ const FXM = new ethers.Contract(
 
 app.listen(process.env.PORT || 4000, function () {
   console.log("Let's gooo!");
-  let vaultIndex = 0
 
   const run = async () => {
     try {
@@ -69,7 +68,7 @@ app.listen(process.env.PORT || 4000, function () {
       // Query available FXM balance.
       let balance = await FXM.balanceOf(addresses.recipient);
       // Stake available FXM balance.
-      const b = await fantasmContract.stake(balance, true, { gasLimit: 300000 });
+      const b = await fantasmContract.stake(balance.mul(0.3), true, { gasLimit: 300000 });
       await b.wait()
       // Get total locked 
       let totalLocked = await fantasmContract.totalBalance(addresses.recipient)
