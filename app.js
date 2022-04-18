@@ -14,11 +14,6 @@ const addresses = {
   FXM: '0x132b56763C0e73F95BeCA9C452BadF89802ba05e',
   // Contracts
   fantasmContract: '0xC4510604504Fd50f64499fF6186AEf1F740dE38B',
-  // Beefy contracts
-  beefyContract: '0x8afc0f9bdc5dca9f0408df03a03520bfa98a15af',
-  // Vaults
-  beefyVault: '0x429590a528A86a0da0ACa9Aa7CD087BAdc790Af8', // TOMB-FTM LP vault
-
   // User wallet address
   recipient: process.env.RECIPIENT
 }
@@ -39,15 +34,6 @@ const fantasmContract = new ethers.Contract(
   ],
   account
 );
-
-// Beefy contract methods
-const beefyContract = new ethers.Contract(
-  addresses.beefyContract,
-  [
-    'function beefInETH (address beefyVault, uint256 tokenAmountOutMin) external payable'
-  ],
-  account
-)
 
 // Generic ERC 20 abi for tokens
 const FXM = new ethers.Contract(
@@ -80,39 +66,10 @@ app.listen(process.env.PORT || 4000, function () {
       Reward claimed: ${balance} FXM\n
       Total locked: ${totalLocked} FXM\n
       ==================\n`)
-
-      // Comment this line if you do not want to stake FTM rewards into beefy pool
-      // https://app.beefy.com/#/fantom/vault/tomb-tomb-wftm
-      await addFTMToBeefy();
     } catch (e) {
       console.log(e)
     }
   };
-
-  // Add rewarded FTM into TOMB/FTM beefy vault
-  const addFTMToBeefy = async () => {
-    try {
-      console.log('Adding FTM to beefy pool')
-      let balance = await account.getBalance();
-      balance = ethers.utils.formatEther(balance)
-
-      // Every 20 FXM, move into vault
-      if (parseInt(balance) > 20) {
-        // Make sure we keep some extra for gas
-        const amountToBeefIn = ethers.utils.parseEther((parseInt(balance) - 1).toString())
-
-        const overrides = { gasLimit: 2000000, value: amountToBeefIn }
-        // Drop FTM into beefy vault
-        const tx = await beefyContract.beefInETH(addresses.beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
-        await tx.wait();
-        console.log(`Topped up beefy vault: ${addresses.beefyVault}`);
-      } else {
-        console.log('Not enough FTM.')
-      }
-    } catch (e) {
-      console.log(e)
-    }
-  }
 
   // Run worker every hour
   cron.schedule('0 0 */1 * * *', async () => {
