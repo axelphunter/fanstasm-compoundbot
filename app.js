@@ -67,7 +67,7 @@ app.listen(process.env.PORT || 4000, function () {
       Total locked: ${totalLocked} FXM\n
       ==================\n`)
     } catch (e) {
-      console.log(e)
+      console.log(e, 'error')
     }
   };
 
