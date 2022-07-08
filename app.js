@@ -5,7 +5,6 @@ require('dotenv').config();
 const ethers = require('ethers');
 const cron = require('node-cron');
 const express = require('express');
-const axios = require('axios')
 const app = express();
 
 const genericErc20Abi = require('./utils/genericErc20Abi.json')
@@ -15,15 +14,6 @@ const addresses = {
   FXM: '0x132b56763C0e73F95BeCA9C452BadF89802ba05e',
   // Contracts
   fantasmContract: '0xC4510604504Fd50f64499fF6186AEf1F740dE38B',
-  beefyContract: '0xf12fee3837492d8fc09d4d0dbba72919ea76d19b',
-  // Vaults
-  beefyVaults: [
-    '0x6FC7AF3d1dF970Cd699E82941a71BC3Df03Ee986', // DEUS-FTM LP vault
-    '0x429590a528A86a0da0ACa9Aa7CD087BAdc790Af8', // TOMB-FTM LP vault
-    '0x44B35db29db8c5277bF842c67b4d36D42323514C', // BSHARE-FTM LP vault
-    '0x503FF2102D51ec816C693017d26E31df666Cadf0' // CRE8R-FTM LP vault
-  ],
-
   // User wallet address
   recipient: process.env.RECIPIENT
 }
@@ -45,15 +35,6 @@ const fantasmContract = new ethers.Contract(
   account
 );
 
-// Beefy contract methods
-const beefyContract = new ethers.Contract(
-  addresses.beefyContract,
-  [
-    'function beefInETH (address beefyVault, uint256 tokenAmountOutMin) external payable'
-  ],
-  account
-)
-
 // Generic ERC 20 abi for tokens
 const FXM = new ethers.Contract(
   addresses.FXM,
@@ -63,7 +44,6 @@ const FXM = new ethers.Contract(
 
 app.listen(process.env.PORT || 4000, function () {
   console.log("Let's gooo!");
-  let vaultIndex = 0
 
   const run = async () => {
     try {
@@ -86,63 +66,14 @@ app.listen(process.env.PORT || 4000, function () {
       Reward claimed: ${balance} FXM\n
       Total locked: ${totalLocked} FXM\n
       ==================\n`)
-
-      // Comment this line if you do not want to stake FTM rewards into beefy pool
-      // https://app.beefy.com/#/fantom/vault/tomb-tomb-wftm
-      await addFTMToBeefy();
     } catch (e) {
-      console.log(e)
+      console.log(e, 'error')
     }
   };
 
-  const getTopBeefyVaults = async () => {
-    // Get all Beefy vaults
-    const response = await axios.get('https://api.beefy.finance/vaults?_=27500633')
-    // Filter by FTM chain and latest
-    let vaults = response.data.filter(vault => vault.chain === 'fantom' && vault.assets.find(b => b === 'FTM')).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
-    // Get vault based on vault index or fallback
-    return vaults[vaultIndex].earnContractAddress || addresses.beefyContract
-  }
-
-  // Add rewarded FTM into TOMB/FTM beefy vault
-  const addFTMToBeefy = async () => {
-    try {
-      console.log('Adding FTM to beefy pool')
-      let balance = await account.getBalance();
-      balance = ethers.utils.formatEther(balance)
-
-      if (parseInt(balance) > 5) {
-        // Make sure we keep some extra for gas
-        const amountToBeefIn = ethers.utils.parseEther((parseInt(balance) - 1).toString())
-
-        const overrides = { gasLimit: 2000000, value: amountToBeefIn }
-        // Spread FTM into top 10 latest beefy vaults
-
-        // TODO
-        // This doesn't work with "BeefIn" always.
-        // const beefyVault = await getTopBeefyVaults()
-        const beefyVault = addresses.beefyVaults[Math.floor(Math.random() * addresses.beefyVaults.length)]
-        const tx = await beefyContract.beefInETH(beefyVault, amountToBeefIn.div(2).div(100).mul(90), overrides)
-        await tx.wait();
-        console.log('Topped up beefy.');
-      } else {
-        console.log('Not enough FTM.')
-      }
-    } catch (e) {
-      console.log(e)
-    }
-  }
-
-  // Run on first deploy
-  run()
   // Run worker every hour
   cron.schedule('0 0 */1 * * *', async () => {
     run()
-    // if (vaultIndex === 9) {
-    //   vaultIndex = 0;
-    // } else {
-    //   vaultIndex++
-    // }
   })
 });
 
